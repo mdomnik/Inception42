@@ -1,0 +1,67 @@
+version: '3.8'
+
+secrets:
+    db_password.txt:
+        file: ./secrets/db_password.txt
+    db_root_password.txt:
+        file: ./secrets/db_root_password.txt
+
+networks:
+    inception_network:
+        driver: bridge
+
+volumes:
+    mariadb:
+        driver: local
+        driver_opts:
+            type: none
+            device: /home/mdomnik.42.fr/data/mariadb
+            o: bind
+    wordpress:
+        driver: local
+        driver_opts:
+            type: none
+            device: /home/mdomnik.42.fr/data/wordpress
+            o: bind
+
+services:
+    mariadb:
+        container_name: mariadb
+        networks:
+            - inception_network
+        build: ./requirements/mariadb
+        image: mariadb:notlatest
+        env_file: .env
+        volumes:
+            - mariadb:/var/lib/mysql
+        restart: always
+        expose:
+            - "3306"
+    nginx:
+        container_name: nginx
+        networks:
+            - inception_network
+        depends_on:
+            - wordpress
+        build: ./requirements/nginx
+        image: nginx:notlatest
+        env_file: .env
+        volumes:
+            - wordpress:/var/www/wordpress
+        restart: always
+        ports:
+            - "443:443"
+    wordpress:
+        container_name: wordpress
+        networks:
+            - inception_network
+        depends_on:
+            - mariadb
+        build: ./requirements/wordpress
+        image: wordpress:notlatest
+        env_file: .env
+        volumes:
+            - wordpress:/var/www/wordpress
+        restart: always
+        expose:
+            - "9000"
