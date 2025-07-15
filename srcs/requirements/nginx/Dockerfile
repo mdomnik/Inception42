@@ -4,6 +4,8 @@ RUN apt update -y && apt upgrade -y
 
 RUN apt install -y nginx && apt install -y openssl
 
+RUN apt clean && rm -rf /var/lib/apt/lists/*
+
 RUN mkdir -p /etc/nginx/ssl
 
 RUN openssl req -x509 -nodes -days 365 -keyout /etc/nginx/ssl/inception.key -out /etc/nginx/ssl/inception.crt -subj "/CN=${DOMAIN_NAME}"
