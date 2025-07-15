@@ -4,7 +4,6 @@
 
 USER = $(shell whoami)
 DATA_PATH = /home/$(USER)/data
-DOCKER_COMPOSE = docker compose
 COMPOSE_FILE = srcs/docker-compose.yml
 
 # Default target
@@ -22,13 +21,13 @@ setup:
 .PHONY: up
 up:
 	@echo "Starting services with Docker Compose..."
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d --build
+	@docker-compose -f $(COMPOSE_FILE) up -d --build
 
 # Stop and remove containers, networks (keeps volumes)
 .PHONY: down
 down:
 	@echo "Stopping services..."
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) down
+	@docker-compose -f $(COMPOSE_FILE) down
 
 # Stop and remove everything including volumes
 .PHONY: fclean
@@ -46,4 +45,4 @@ re: fclean all
 # Show logs
 .PHONY: logs
 logs:
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) logs -f
+	@docker-compose -f $(COMPOSE_FILE) logs -f

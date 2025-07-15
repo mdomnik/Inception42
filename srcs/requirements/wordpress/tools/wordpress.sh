@@ -1,3 +1,5 @@
+#!/bin/bash
+
 mkdir -p /var/www/wordpress
 
 cd /var/www/wordpress
