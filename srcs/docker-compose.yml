@@ -1,5 +1,3 @@
-version: '3.8'
-
 secrets:
   db_root_password.txt:
     file: ./secrets/db_root_password.txt
@@ -11,75 +9,76 @@ secrets:
     file: ./secrets/wp_user_password.txt
 
 networks:
-    inception_network:
-        driver: bridge
-
-volumes:
-    mariadb:
-        driver: local
-        driver_opts:
-            type: none
-            device: /home/mdomnik.42.fr/data/mariadb
-            o: bind
-    wordpress:
-        driver: local
-        driver_opts:
-            type: none
-            device: /home/mdomnik.42.fr/data/wordpress
-            o: bind
+  inception_network:
 
 services:
-    mariadb:
-        container_name: mariadb
-        networks:
-            - inception_network
-        build: ./requirements/mariadb
-        image: mariadb:notlatest
-        secrets:
-            - db_root_password.txt
-            - db_password.txt
-        environment:
-            MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password.txt
-            MYSQL_PASSWORD_FILE: /run/secrets/db_password.txt
-        env_file: .env
-        volumes:
-            - mariadb:/var/lib/mysql
-        restart: unless-stopped
-        expose:
-            - "3306"
-    nginx:
-        container_name: nginx
-        networks:
-            - inception_network
-        depends_on:
-            - wordpress
-        build: ./requirements/nginx
-        image: nginx:notlatest
-        env_file: .env
-        volumes:
-            - wordpress:/var/www/wordpress
-        restart: unless-stopped
-        ports:
-            - "443:443"
-    wordpress:
-        container_name: wordpress
-        networks:
-            - inception_network
-        depends_on:
-            - mariadb
-        build: ./requirements/wordpress
-        image: wordpress:notlatest
-        secrets:
-            - db_password.txt
-            - wp_admin_password.txt
-            - wp_user_password.txt
-        environment:
-            MYSQL_PASSWORD_FILE: /run/secrets/db_password.txt
-            WP_ADMIN_PASSWORD_FILE: /run/secrets/wp_admin_password.txt
-            WP_USER_PASSWORD_FILE: /run/secrets/wp_user_password.txt
-        env_file: .env
-        volumes:
-            - wordpress:/var/www/wordpress
-        restart: unless-stopped
-        expose:
-            - "9000"
+  mariadb:
+    build: ./requirements/mariadb
+    image: mariadb:notlatest
+    networks: [inception_network]
+    restart: unless-stopped
+    volumes:
+      - /home/maciej/data/mariadb:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password.txt
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password.txt
+    secrets:
+      - db_root_password.txt
+      - db_password.txt
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -uroot -p$$(cat /run/secrets/db_root_password.txt) --silent || mysqladmin ping -h 127.0.0.1 --silent"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+
+  wordpress:
+    build: ./requirements/wordpress
+    image: wordpress:notlatest
+    networks: [inception_network]
+    restart: unless-stopped
+    volumes:
+      - /home/maciej/data/wordpress:/var/www/wordpress
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password.txt
+      MYSQL_HOST: mariadb
+
+      SITE_TITLE: ${SITE_TITLE}
+      WP_ADMIN_USER: ${WP_ADMIN_USER}
+      WP_ADMIN_EMAIL: ${WP_ADMIN_EMAIL}
+      WP_USER: ${WP_USER}
+      WP_USER_EMAIL: ${WP_USER_EMAIL}
+
+      WP_ADMIN_PASSWORD_FILE: /run/secrets/wp_admin_password.txt
+      WP_USER_PASSWORD_FILE: /run/secrets/wp_user_password.txt
+    secrets:
+      - db_password.txt
+      - wp_admin_password.txt
+      - wp_user_password.txt
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  nginx:
+    build:
+      context: ./requirements/nginx
+      args:
+        DOMAIN_NAME: ${DOMAIN_NAME}
+    image: nginx:notlatest
+    networks: [inception_network]
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    volumes:
+      - /home/maciej/data/wordpress:/var/www/wordpress
+    depends_on:
+      - wordpress

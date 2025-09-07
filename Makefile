@@ -1,48 +1,101 @@
 # **************************************************************************** #
-#                              Inception Makefile                              #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    Makefile                                           :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: mdomnik <mdomnik@student.42berlin.de>      +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2025/09/07 15:29:33 by mdomnik           #+#    #+#              #
+#    Updated: 2025/09/07 15:31:11 by mdomnik          ###   ########.fr        #
+#                                                                              #
 # **************************************************************************** #
 
-USER = $(shell whoami)
-DATA_PATH = /home/$(USER)/data
-COMPOSE_FILE = srcs/docker-compose.yml
+SHELL := /bin/bash
 
-# Default target
+COMPOSE_FILE := srcs/docker-compose.yml
+ENV_FILE     := srcs/.env
+
+DATA_DIR     := /home/maciej/data
+DB_DIR       := $(DATA_DIR)/mariadb
+WP_DIR       := $(DATA_DIR)/wordpress
+
+COMPOSE      := docker compose -p srcs --env-file $(ENV_FILE) -f $(COMPOSE_FILE)
+
 .PHONY: all
-all: setup up
+all: up
 
-# Create required data directories for volumes
-.PHONY: setup
-setup:
-	@echo "Creating volume directories..."
-	@mkdir -p $(DATA_PATH)/mariadb
-	@mkdir -p $(DATA_PATH)/wordpress
+.PHONY: prepare
+prepare:
+	@echo ">> Ensuring host data directories exist under $(DATA_DIR)"
+	mkdir -p "$(DB_DIR)" "$(WP_DIR)"
+	@echo ">> Parent directory perms set to 755 (subdirs left untouched)"
+	- chmod 755 "$(DATA_DIR)" || true
 
-# Build and run containers
 .PHONY: up
-up:
-	@echo "Starting services with Docker Compose..."
-	@docker-compose -f $(COMPOSE_FILE) up -d --build
+up: prepare
+	$(COMPOSE) up -d --build
 
-# Stop and remove containers, networks (keeps volumes)
+.PHONY: build
+build:
+	$(COMPOSE) build
+
+.PHONY: start
+start:
+	$(COMPOSE) start
+
+.PHONY: stop
+stop:
+	$(COMPOSE) stop
+
+.PHONY: restart
+restart:
+	$(COMPOSE) restart
+
 .PHONY: down
 down:
-	@echo "Stopping services..."
-	@docker-compose -f $(COMPOSE_FILE) down
+	$(COMPOSE) down
 
-# Stop and remove everything including volumes
+.PHONY: clean
+clean:
+	$(COMPOSE) down -v
+
 .PHONY: fclean
-fclean: down
-	@echo "Removing volumes..."
-	@rm -rf $(DATA_PATH)/mariadb
-	@rm -rf $(DATA_PATH)/wordpress
-	@docker volume prune -f
-	@docker system prune -af
+fclean: clean
+	@echo ">> Removing host data directories under $(DATA_DIR)"
+	sudo rm -rf "$(DB_DIR)" "$(WP_DIR)"
 
-# Rebuild everything from scratch
 .PHONY: re
-re: fclean all
+re: fclean up
 
-# Show logs
+.PHONY: ps
+ps:
+	$(COMPOSE) ps
+
 .PHONY: logs
 logs:
-	@docker-compose -f $(COMPOSE_FILE) logs -f
+	$(COMPOSE) logs -f
+
+.PHONY: logs-svc
+logs-svc:
+	@if [ -z "$(S)" ]; then echo "Usage: make logs-svc S=<service>"; exit 1; fi
+	$(COMPOSE) logs -f $(S)
+
+.PHONY: sh
+sh:
+	@if [ -z "$(S)" ]; then echo "Usage: make sh S=<service>"; exit 1; fi
+	$(COMPOSE) exec $(S) bash || $(COMPOSE) exec $(S) sh
+
+.PHONY: info
+info:
+	@echo "================ Inception — Info ================"
+	@echo "WordPress URL: https://$$(grep -E '^DOMAIN_NAME=' $(ENV_FILE) | cut -d= -f2 || echo localhost)"
+	@echo "Nginx listens: 443 (TLS)"
+	@echo "Data dir     : $(DATA_DIR)"
+	@echo "MariaDB data : $(DB_DIR)"
+	@echo "WP files     : $(WP_DIR)"
+	@echo "=================================================="
+
+.PHONY: remind-hosts
+remind-hosts:
+	@echo ">> Reminder: map DOMAIN_NAME from $(ENV_FILE) to your VM IP in /etc/hosts"
+	@echo "   Example: 192.168.56.10  maciej.42.fr"
