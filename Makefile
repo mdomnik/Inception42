@@ -6,7 +6,7 @@
 #    By: mdomnik <mdomnik@student.42berlin.de>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/09/07 15:29:33 by mdomnik           #+#    #+#              #
-#    Updated: 2025/09/07 15:31:11 by mdomnik          ###   ########.fr        #
+#    Updated: 2025/09/08 14:17:59 by mdomnik          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,7 +15,7 @@ SHELL := /bin/bash
 COMPOSE_FILE := srcs/docker-compose.yml
 ENV_FILE     := srcs/.env
 
-DATA_DIR     := /home/maciej/data
+DATA_DIR     := /home/mdomnik/data
 DB_DIR       := $(DATA_DIR)/mariadb
 WP_DIR       := $(DATA_DIR)/wordpress
 
@@ -98,4 +98,4 @@ info:
 .PHONY: remind-hosts
 remind-hosts:
 	@echo ">> Reminder: map DOMAIN_NAME from $(ENV_FILE) to your VM IP in /etc/hosts"
-	@echo "   Example: 192.168.56.10  maciej.42.fr"
+	@echo "   Example: 192.168.56.10  mdomnik.42.fr"
