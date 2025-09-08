@@ -11,6 +11,21 @@ secrets:
 networks:
   inception_network:
 
+volumes:
+  mariadb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/maciej/data/mariadb
+  wordpress_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/maciej/data/wordpress
+
+
 services:
   mariadb:
     build: ./requirements/mariadb
@@ -18,7 +33,7 @@ services:
     networks: [inception_network]
     restart: unless-stopped
     volumes:
-      - /home/maciej/data/mariadb:/var/lib/mysql
+      - mariadb_data:/var/lib/mysql
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
@@ -38,14 +53,13 @@ services:
       retries: 20
       start_period: 30s
 
-
   wordpress:
     build: ./requirements/wordpress
     image: wordpress:notlatest
     networks: [inception_network]
     restart: unless-stopped
     volumes:
-      - /home/maciej/data/wordpress:/var/www/wordpress
+      - wordpress_data:/var/www/wordpress
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
@@ -79,6 +93,6 @@ services:
     ports:
       - "443:443"
     volumes:
-      - /home/maciej/data/wordpress:/var/www/wordpress
+      - wordpress_data:/var/www/wordpress
     depends_on:
       - wordpress
